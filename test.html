@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Інструмент перекладу Grey Hack</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/he/1.2.0/he.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">Інструмент перекладу Grey Hack</h1>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Завантаження файлів</h2>
+            <div class="mb-4">
+                <h3 class="font-medium mb-2">Оригінальний файл:</h3>
+                <div class="flex flex-col md:flex-row items-center gap-4">
+                    <input type="file" id="originalFileInput" accept=".json" class="hidden" />
+                    <label for="originalFileInput" class="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition duration-300">
+                        Вибрати оригінальний файл
+                    </label>
+                    <span id="originalFileName" class="text-gray-600">Файл не вибрано</span>
+                    <div id="originalLoadingIndicator" class="hidden">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-700"></div>
+                    </div>
+                    <div id="originalFileStatus" class="mt-2 hidden"></div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="font-medium mb-2">Частково перекладений файл (опціонально):</h3>
+                <div class="flex flex-col md:flex-row items-center gap-4">
+                    <input type="file" id="partialFileInput" accept=".json" class="hidden" />
+                    <label for="partialFileInput" class="cursor-pointer bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-md transition duration-300">
+                        Вибрати файл перекладу
+                    </label>
+                    <span id="partialFileName" class="text-gray-600">Файл не вибрано</span>
+                    <div id="partialLoadingIndicator" class="hidden">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-700"></div>
+                    </div>
+                    <div id="partialFileStatus" class="mt-2 hidden"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="translationInterface" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
+            <h2 class="text-xl font-semibold mb-4">Інтерфейс перекладу</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                <div>
+                    <h3 class="font-medium mb-2">Ключ:</h3>
+                    <div id="currentKey" class="p-3 bg-gray-100 rounded-md min-h-12 mb-4">-</div>
+
+                    <h3 class="font-medium mb-2">Оригінальний текст:</h3>
+                    <div id="originalText" class="p-3 bg-gray-100 rounded-md min-h-24 mb-2 whitespace-pre-wrap">-</div>
+                </div>
+
+                <div>
+                    <h3 class="font-medium mb-2">Переклад:</h3>
+                    <textarea id="translationText" class="w-full p-3 border border-gray-300 rounded-md min-h-40 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-between items-center mb-4">
+                <div class="text-sm text-gray-600" id="progressIndicator">Рядок 0 з 0</div>
+
+                <div class="flex flex-wrap gap-2 mt-2 md:mt-0">
+                    <button id="prevButton" class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-md transition duration-300">
+                        Назад
+                    </button>
+                    <button id="nextButton" class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-md transition duration-300">
+                        Далі
+                    </button>
+                    <button id="translateButton" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-md transition duration-300">
+                        Перекласти
+                    </button>
+                    <button id="clearButton" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-md transition duration-300">
+                        Очистити
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 justify-center md:justify-end">
+                <button id="translateAllButton" class="bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-md transition duration-300">
+                    Перекласти все
+                </button>
+                <button id="saveButton" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition duration-300">
+                    Зберегти
+                </button>
+            </div>
+        </div>
+
+        <div id="translationsTable" class="bg-white rounded-lg shadow-md p-6 hidden">
+            <h2 class="text-xl font-semibold mb-4">Таблиця перекладів</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">№</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ключ</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Оригінал</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Переклад</th>
+                        </tr>
+                    </thead>
+                    <tbody id="translationsTableBody" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="notification" class="fixed bottom-4 right-4 py-2 px-4 rounded-md text-white hidden"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Кешування DOM елементів
+            const originalFileInput = document.getElementById('originalFileInput');
+            const originalFileNameDisplay = document.getElementById('originalFileName');
+            const originalLoadingIndicator = document.getElementById('originalLoadingIndicator');
+            const originalFileStatus = document.getElementById('originalFileStatus');
+            const partialFileInput = document.getElementById('partialFileInput');
+            const partialFileNameDisplay = document.getElementById('partialFileName');
+            const partialLoadingIndicator = document.getElementById('partialLoadingIndicator');
+            const partialFileStatus = document.getElementById('partialFileStatus');
+            const translationInterface = document.getElementById('translationInterface');
+            const translationsTable = document.getElementById('translationsTable');
+            const currentKeyDisplay = document.getElementById('currentKey');
+            const originalTextDisplay = document.getElementById('originalText');
+            const translationText = document.getElementById('translationText');
+            const progressIndicator = document.getElementById('progressIndicator');
+            const prevButton = document.getElementById('prevButton');
+            const nextButton = document.getElementById('nextButton');
+            const translateButton = document.getElementById('translateButton');
+            const clearButton = document.getElementById('clearButton');
+            const translateAllButton = document.getElementById('translateAllButton');
+            const saveButton = document.getElementById('saveButton');
+            const translationsTableBody = document.getElementById('translationsTableBody');
+            const notification = document.getElementById('notification');
+
+            // Змінні для зберігання даних
+            let originalData = null;
+            let translations = [];
+            let currentIndex = 0;
+            let isTranslatingAll = false;
+            let partialTranslationsData = null;
+
+            // Функція для показу сповіщень
+            function showNotification(message, type) {
+                notification.textContent = message;
+                notification.className = 'fixed bottom-4 right-4 py-2 px-4 rounded-md text-white';
+                notification.classList.toggle('bg-red-500', type === 'error');
+                notification.classList.toggle('bg-green-500', type === 'success');
+                notification.classList.toggle('bg-blue-500', type !== 'error' && type !== 'success');
+                notification.classList.remove('hidden');
+                setTimeout(() => notification.classList.add('hidden'), 3000);
+            }
+
+            function handleOriginalFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                originalFileNameDisplay.textContent = file.name;
+                originalLoadingIndicator.classList.remove('hidden');
+                originalFileStatus.classList.add('hidden');
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const jsonData = JSON.parse(e.target.result);
+                        if (!jsonData.content) {
+                            showNotification('Помилка: У оригінальному файлі відсутній розділ "content".', 'error');
+                            originalLoadingIndicator.classList.add('hidden');
+                            return;
+                        }
+                        originalData = jsonData;
+                        if (partialTranslationsData) {
+                            processData(jsonData, partialTranslationsData);
+                        } else {
+                            processData(jsonData);
+                        }
+                        originalFileStatus.textContent = 'Оригінальний файл успішно завантажено';
+                        originalFileStatus.className = 'mt-2 text-green-600';
+                        originalFileStatus.classList.remove('hidden');
+                        translationInterface.classList.remove('hidden');
+                        translationsTable.classList.remove('hidden');
+                        showNotification('Оригінальний файл успішно завантажено', 'success');
+                    } catch (error) {
+                        originalFileStatus.textContent = 'Помилка: Неправильний формат JSON';
+                        originalFileStatus.className = 'mt-2 text-red-600';
+                        originalFileStatus.classList.remove('hidden');
+                        showNotification('Помилка: Неправильний формат JSON (оригінальний файл)', 'error');
+                    }
+                    originalLoadingIndicator.classList.add('hidden');
+                };
+                reader.onerror = () => {
+                    originalFileStatus.textContent = 'Помилка при зчитуванні оригінального файлу';
+                    originalFileStatus.className = 'mt-2 text-red-600';
+                    originalFileStatus.classList.remove('hidden');
+                    originalLoadingIndicator.classList.add('hidden');
+                    showNotification('Помилка при зчитуванні оригінального файлу', 'error');
+                };
+                reader.readAsText(file);
+            }
+
+            function handlePartialFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                partialFileNameDisplay.textContent = file.name;
+                partialLoadingIndicator.classList.remove('hidden');
+                partialFileStatus.classList.add('hidden');
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const jsonData = JSON.parse(e.target.result);
+                        partialTranslationsData = jsonData;
+                        partialFileStatus.textContent = 'Файл перекладу успішно завантажено';
+                        partialFileStatus.className = 'mt-2 text-green-600';
+                        partialFileStatus.classList.remove('hidden');
+                        showNotification('Файл перекладу успішно завантажено', 'success');
+                        if (originalData) {
+                            processData(originalData, partialTranslationsData);
+                            translationInterface.classList.remove('hidden');
+                            translationsTable.classList.remove('hidden');
+                        }
+                    } catch (error) {
+                        partialFileStatus.textContent = 'Помилка: Неправильний формат JSON';
+                        partialFileStatus.className = 'mt-2 text-red-600';
+                        partialFileStatus.classList.remove('hidden');
+                        showNotification('Помилка: Неправильний формат JSON (файл перекладу)', 'error');
+                    }
+                    partialLoadingIndicator.classList.add('hidden');
+                };
+                reader.onerror = () => {
+                    partialFileStatus.textContent = 'Помилка при зчитуванні файлу перекладу';
+                    partialFileStatus.className = 'mt-2 text-red-600';
+                    partialFileStatus.classList.remove('hidden');
+                    partialLoadingIndicator.classList.add('hidden');
+                    showNotification('Помилка при зчитуванні файлу перекладу', 'error');
+                };
+                reader.readAsText(file);
+            }
+
+            function extractTranslatableContent(obj, parentKey = '', results = []) {
+                if (!obj || typeof obj !== 'object') return results;
+                for (const key in obj) {
+                    if (Object.hasOwn(obj, key)) {
+                        const value = obj[key];
+                        const fullKey = parentKey ? `${parentKey}.${key}` : key;
+                        if (typeof value === 'string' && value.trim() !== '') {
+                            results.push({ key: fullKey, original: value, translation: '', isTranslated: false });
+                        } else if (typeof value === 'object') {
+                            extractTranslatableContent(value, fullKey, results);
+                        }
+                    }
+                }
+                return results;
+            }
+
+            function processData(originalJsonData, partialJsonData = null) {
+                translations = extractTranslatableContent(originalJsonData.content, 'content');
+                if (partialJsonData && partialJsonData.content) {
+                    const partialTranslationsMap = new Map();
+                    function extractPartialTranslations(obj, parentKey = '') {
+                        if (!obj || typeof obj !== 'object') return;
+                        for (const key in obj) {
+                            if (Object.hasOwn(obj, key)) {
+                                const value = obj[key];
+                                const fullKey = parentKey ? `${parentKey}.${key}` : key;
+                                if (typeof value === 'string') {
+                                    partialTranslationsMap.set(`content.${fullKey}`, value);
+                                } else if (typeof value === 'object') {
+                                    extractPartialTranslations(value, fullKey);
+                                }
+                            }
+                        }
+                    }
+                    extractPartialTranslations(partialJsonData.content);
+                    translations.forEach(item => {
+                        if (partialTranslationsMap.has(item.key)) {
+                            item.translation = partialTranslationsMap.get(item.key);
+                            item.isTranslated = item.translation.length > 0;
+                        }
+                    });
+                }
+                currentIndex = 0;
+                updateTranslationInterface();
+                updateTranslationsTable();
+            }
+
+            function updateTranslationInterface() {
+                if (translations.length === 0) {
+                    currentKeyDisplay.textContent = '-';
+                    originalTextDisplay.textContent = '-';
+                    translationText.value = '';
+                    progressIndicator.textContent = 'Рядок 0 з 0';
+                    return;
+                }
+                const currentItem = translations[currentIndex];
+                currentKeyDisplay.textContent = currentItem.key;
+                originalTextDisplay.textContent = currentItem.original;
+                translationText.value = currentItem.translation;
+                progressIndicator.textContent = `Рядок ${currentIndex + 1} з ${translations.length}`;
+                prevButton.disabled = currentIndex === 0;
+                nextButton.disabled = currentIndex === translations.length - 1;
+                const rows = translationsTableBody.querySelectorAll('tr');
+                rows.forEach((row, index) => row.classList.toggle('bg-blue-100', index === currentIndex));
+            }
+
+            function updateTranslationsTable() {
+                translationsTableBody.innerHTML = '';
+                const fragment = document.createDocumentFragment();
+                translations.forEach((item, index) => {
+                    const row = document.createElement('tr');
+                    row.className = item.isTranslated ? 'bg-green-50 hover:bg-green-100 cursor-pointer' : 'hover:bg-gray-50 cursor-pointer';
+                    row.classList.toggle('bg-blue-100', index === currentIndex);
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${index + 1}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.key}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900 break-words">${item.original}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900 break-words">${item.translation || '-'}</td>
+                    `;
+                    row.addEventListener('click', () => {
+                        saveCurrentTranslation();
+                        currentIndex = index;
+                        updateTranslationInterface();
+                    });
+                    fragment.appendChild(row);
+                });
+                translationsTableBody.appendChild(fragment);
+            }
+
+            function goToPreviousText() {
+                if (currentIndex > 0) {
+                    saveCurrentTranslation();
+                    currentIndex--;
+                    updateTranslationInterface();
+                }
+            }
+
+            function goToNextText() {
+                if (currentIndex < translations.length - 1) {
+                    saveCurrentTranslation();
+                    currentIndex++;
+                    updateTranslationInterface();
+                }
+            }
+
+            function saveCurrentTranslation() {
+                if (translations.length === 0) return;
+                const currentTranslation = translationText.value.trim();
+                const currentItem = translations[currentIndex];
+                currentItem.translation = currentTranslation;
+                currentItem.isTranslated = currentTranslation.length > 0;
+                const row = translationsTableBody.querySelectorAll('tr')[currentIndex];
+                if (row) {
+                    row.className = currentItem.isTranslated ? 'bg-green-50 hover:bg-green-100 cursor-pointer' : 'hover:bg-gray-50 cursor-pointer';
+                    row.classList.toggle('bg-blue-100', currentIndex === currentIndex); // Ensure current row highlight
+                    row.cells[3].textContent = currentItem.translation || '-';
+                }
+            }
+
+            function clearTranslation() {
+                translationText.value = '';
+            }
+
+            function saveTranslations() {
+                if (!originalData) {
+                    showNotification('Немає даних для збереження', 'error');
+                    return;
+                }
+                saveCurrentTranslation();
+                const outputData = JSON.parse(JSON.stringify(originalData));
+                const translationsMap = new Map(translations.filter(item => item.isTranslated).map(item => [item.key, item.translation]));
+
+                function updateTranslatedContent(obj, parentKey = '') {
+                    if (!obj || typeof obj !== 'object') return;
+                    for (const key in obj) {
+                        if (Object.hasOwn(obj, key)) {
+                            const value = obj[key];
+                            const fullKey = parentKey ? `${parentKey}.${key}` : key;
+                            const translationKey = `content.${fullKey}`;
+                            if (typeof value === 'string' && translationsMap.has(translationKey)) {
+                                obj[key] = translationsMap.get(translationKey);
+                            } else if (typeof value === 'object') {
+                                updateTranslatedContent(value, fullKey);
+                            }
+                        }
+                    }
+                }
+
+                updateTranslatedContent(outputData.content);
+
+                const jsonOutput = JSON.stringify(outputData, null, 2);
+                const blob = new Blob([jsonOutput], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'translated_' + originalFileNameDisplay.textContent;
+                a.click();
+                URL.revokeObjectURL(url);
+                showNotification('Переклад успішно збережено', 'success');
+            }
+
+            async function translateCurrentText() {
+                if (translations.length === 0) return;
+                const currentItem = translations[currentIndex];
+                const originalText = currentItem.original;
+                const translatedText = await translateTextWithExclusions(originalText);
+                translationText.value = translatedText;
+                saveCurrentTranslation();
+            }
+
+            async function toggleTranslateAll() {
+                if (isTranslatingAll) {
+                    isTranslatingAll = false;
+                    translateAllButton.textContent = 'Зупинити';
+                    translateAllButton.classList.remove('bg-red-500', 'hover:bg-red-600');
+                    translateAllButton.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
+                    return;
+                }
+
+                const shouldTranslateAll = confirm('Ви впевнені, що хочете автоматично перекласти всі неперекладені рядки?');
+                if (!shouldTranslateAll) return;
+
+                isTranslatingAll = true;
+                translateAllButton.textContent = 'Зупинити';
+                translateAllButton.classList.remove('bg-indigo-500', 'hover:bg-indigo-600');
+                translateAllButton.classList.add('bg-red-500', 'hover:bg-red-600');
+
+                const totalTranslations = translations.filter(item => !item.isTranslated).length;
+                let translatedCount = 0;
+
+                for (let i = 0; i < translations.length && isTranslatingAll; i++) {
+                    currentIndex = i;
+                    updateTranslationInterface(); // Відображення поточного рядка
+
+                    const currentItem = translations[i];
+
+                    if (!currentItem.isTranslated) {
+                        const translatedText = await translateTextWithExclusions(currentItem.original);
+                        translationText.value = translatedText;
+                        saveCurrentTranslation();
+                        translatedCount++;
+                        progressIndicator.textContent = `Перекладено ${translatedCount} з ${totalTranslations} рядків`;
+                        await new Promise(resolve => setTimeout(resolve, 50)); // Зменшено затримку
+                    }
+                }
+
+                isTranslatingAll = false;
+                translateAllButton.textContent = 'Перекласти все';
+                translateAllButton.classList.remove('bg-red-500', 'hover:bg-red-600');
+                translateAllButton.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
+
+                showNotification('Автоматичний переклад завершено', 'success');
+            }
+
+            async function translateTextWithExclusions(text) {
+                function findTextInBrackets(str) {
+                    const regex = /\[(.*?)\]/g;
+                    const matches = [];
+                    let match;
+                    while ((match = regex.exec(str)) !== null) {
+                        matches.push({ text: match[0], start: match.index, end: match.index + match[0].length });
+                    }
+                    return matches;
+                }
+
+                const bracketsMatches = findTextInBrackets(text);
+                if (bracketsMatches.length === 0) {
+                    return await translateText(text);
+                } else {
+                    let result = '';
+                    let lastEnd = 0;
+                    for (const match of bracketsMatches) {
+                        if (match.start > lastEnd) {
+                            const partToTranslate = text.substring(lastEnd, match.start);
+                            const translatedPart = await translateText(partToTranslate);
+                            result += translatedPart;
+                        }
+                        result += match.text;
+                        lastEnd = match.end;
+                    }
+                    if (lastEnd < text.length) {
+                        const partToTranslate = text.substring(lastEnd);
+                        const translatedPart = await translateText(partToTranslate);
+                        result += translatedPart;
+                    }
+                    return result;
+                }
+            }
+
+            async function translateText(text) {
+                if (!text || text.trim() === '') return '';
+                try {
+                    const apiUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=uk&dt=t&q=${encodeURIComponent(text)}`;
+                    const response = await fetch(apiUrl);
+                    if (!response.ok) {
+                        console.error('Помилка API перекладу:', response.status, response.statusText);
+                        showNotification('Помилка при перекладі тексту', 'error');
+                        return text;
+                    }
+                    const data = await response.json();
+                    return data[0].map(segment => segment[0]).join('');
+                } catch (error) {
+                    console.error('Помилка перекладу:', error);
+                    showNotification('Помилка при перекладі тексту', 'error');
+                    return text;
+                }
+            }
+
+            function handleKeyboardShortcuts(event) {
+                if (event.ctrlKey && event.key === 's') {
+                    event.preventDefault();
+                    saveTranslations();
+                }
+                if (event.ctrlKey && event.key === 't') {
+                    event.preventDefault();
+                    translateCurrentText();
+                }
+                if ((event.key === 'Enter' && !event.shiftKey) || event.key === 'ArrowDown') {
+                    if (document.activeElement === translationText) {
+                        event.preventDefault();
+                        goToNextText();
+                    }
+                }
+                if ((event.key === 'Enter' && event.shiftKey) || event.key === 'ArrowUp') {
+                    if (document.activeElement === translationText) {
+                        event.preventDefault();
+                        goToPreviousText();
+                    }
+                }
+            }
+
+            // Ініціація обробників подій
+            originalFileInput.addEventListener('change', handleOriginalFileUpload);
+            partialFileInput.addEventListener('change', handlePartialFileUpload);
+            prevButton.addEventListener('click', goToPreviousText);
+            nextButton.addEventListener('click', goToNextText);
+            translateButton.addEventListener('click', translateCurrentText);
+            clearButton.addEventListener('click', clearTranslation);
+            translateAllButton.addEventListener('click', toggleTranslateAll);
+            saveButton.addEventListener('click', saveTranslations);
+            document.addEventListener('keydown', handleKeyboardShortcuts);
+        });
+    </script>
+</body>
+</html>
